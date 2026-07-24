@@ -10,6 +10,8 @@ public interface InternshipTaskService {
 
     void updateInternshipTask(InternshipTaskSaveReqVO reqVO);
 
+    void updateInternshipTaskStatus(Long id, Integer status);
+
     void deleteInternshipTask(Long id);
 
     PageResult<InternshipTaskDO> getInternshipTaskPage(InternshipTaskPageReqVO reqVO);

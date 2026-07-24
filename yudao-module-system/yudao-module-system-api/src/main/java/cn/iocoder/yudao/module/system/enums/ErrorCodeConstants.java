@@ -170,5 +170,6 @@ public interface ErrorCodeConstants {
 
     // ========== 实习任务 1-002-029-000 ==========
     ErrorCode INTERNSHIP_TASK_NOT_EXISTS = new ErrorCode(1_002_029_000, "实习任务不存在");
-
+    ErrorCode INTERNSHIP_TASK_STATUS_TRANSITION_INVALID =
+            new ErrorCode(1_002_029_001, "实习任务状态不允许从 {} 变更为 {}");
 }

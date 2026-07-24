@@ -1,17 +1,20 @@
 package cn.iocoder.yudao.module.system.service.internship;
 
-import org.springframework.stereotype.Service;
-
-import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
-import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.INTERNSHIP_TASK_NOT_EXISTS;
-import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.system.controller.admin.internship.vo.InternshipTaskPageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.internship.vo.InternshipTaskSaveReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.internship.InternshipTaskDO;
 import cn.iocoder.yudao.module.system.dal.mysql.internship.InternshipTaskMapper;
 import cn.iocoder.yudao.module.system.enums.internship.InternshipTaskStatusEnum;
 import jakarta.annotation.Resource;
+import org.springframework.stereotype.Service;
+
+import java.util.Objects;
+
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.INTERNSHIP_TASK_NOT_EXISTS;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.INTERNSHIP_TASK_STATUS_TRANSITION_INVALID;
 
 @Service
 public class InternshipTaskServiceImpl implements InternshipTaskService {
@@ -35,6 +38,33 @@ public class InternshipTaskServiceImpl implements InternshipTaskService {
             throw exception(INTERNSHIP_TASK_NOT_EXISTS);
         }
         internshipTaskMapper.updateById(BeanUtils.toBean(reqVO, InternshipTaskDO.class));
+    }
+
+    @Override
+    public void updateInternshipTaskStatus(Long id, Integer status) {
+        InternshipTaskDO internshipTaskDO = internshipTaskMapper.selectById(id);
+        if (internshipTaskDO == null) {
+            throw exception(INTERNSHIP_TASK_NOT_EXISTS);
+        }
+        Integer statusTodo = InternshipTaskStatusEnum.TODO.getStatus();
+        Integer statusInProgress = InternshipTaskStatusEnum.IN_PROGRESS.getStatus();
+        Integer statusDone = InternshipTaskStatusEnum.DONE.getStatus();
+        Integer currentStatus = internshipTaskDO.getStatus();
+        Integer targetStatus = status;
+        if (Objects.equals(currentStatus, targetStatus)) {
+            return;
+        }
+        if ((Objects.equals(currentStatus, statusTodo) && Objects.equals(targetStatus, statusInProgress))
+                || (Objects.equals(currentStatus, statusInProgress) && Objects.equals(targetStatus, statusDone))) {
+            InternshipTaskDO updateDO = new InternshipTaskDO();
+            updateDO.setId(id);
+            updateDO.setStatus(targetStatus);
+            internshipTaskMapper.updateById(updateDO);
+        } else {
+            throw exception(INTERNSHIP_TASK_STATUS_TRANSITION_INVALID,
+                    currentStatus,
+                    targetStatus);
+        }
     }
 
     @Override
