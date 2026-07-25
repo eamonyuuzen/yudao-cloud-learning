@@ -9,6 +9,7 @@ DELETE FROM "system_user_session";
 DELETE FROM "system_post";
 DELETE FROM "system_user_post";
 DELETE FROM "system_notice";
+DELETE FROM "system_internship_task";
 DELETE FROM "system_login_log";
 DELETE FROM "system_operate_log";
 DELETE FROM "system_users";

@@ -37,7 +37,8 @@ public class InternshipTaskServiceImpl implements InternshipTaskService {
         if (task == null) {
             throw exception(INTERNSHIP_TASK_NOT_EXISTS);
         }
-        internshipTaskMapper.updateById(BeanUtils.toBean(reqVO, InternshipTaskDO.class));
+        internshipTaskMapper.updateEditableFields(reqVO.getId(), reqVO.getTitle(),
+                reqVO.getDescription(), reqVO.getDeadline());
     }
 
     @Override
