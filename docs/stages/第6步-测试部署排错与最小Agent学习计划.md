@@ -1,8 +1,34 @@
 # 第 6 步：测试、部署、排错与最小 Agent 学习计划
 
-> 版本：v0.2，已纳入 3～4 天学习窗口、一周轻复习空窗、双电脑与 Java/Python Agent 路线。
+> 版本：v0.3，已纳入当前 6A 证据、Spring AI 2.0 版本边界、最小 Agent 项目与评测闭环。
 > 当前入口：第 5 步独立业务纵向切片已经完成，从第 6A 步开始。
 > 核心原则：先建立系统黑盒和责任边界，再进入一个具体机制；每轮至少留下一个可观察证据。
+
+截至 2026-07-28 的实际检查点：
+
+```text
+已经形成证据：
+Service / Controller / 权限测试
+→ 真实 HTTP 200 / 403
+→ Maven 构建与可执行 JAR
+→ IDE 外 Java 进程、端口和停止恢复
+→ 本机开发请求拓扑
+→ “现象 → 边界 → 证据 → 根因 → 恢复”排错模型
+
+尚未形成动手证据：
+Compose 统一管理依赖
+→ 前端 dist
+→ Nginx 静态服务与反向代理
+→ 完整 6A 收尾
+
+Agent：
+已完成路线评审和工作台设计
+→ 尚未进入实现
+```
+
+因此，当前不是“6A 全部完成”，而是“空窗前的工程基础图已经形成”。详细 Agent 施工入口见：
+
+- [第 6B 步：最小 Agent 业务闭环学习工作台](第6B步-最小Agent业务闭环学习工作台.md)
 
 ## 1. 第 6 步到底在解决什么
 
@@ -120,13 +146,14 @@ Python：
 
 ```text
 FastAPI：提供一个很小的 Agent HTTP 入口
+OpenAI Agents SDK：管理 Agent、function_tool 和工具循环
 Pydantic：约束请求、工具参数和响应结构
-HTTP 客户端：携带正常 Authorization 调用 Java
-模型 SDK：连接 OpenAI 兼容的云端或本地模型 API
+HTTPX：携带正常 Authorization 调用 Java
+模型 Provider 配置：连接 OpenAI 或 OpenAI-compatible API
 pytest：验证工具参数和 Java API 适配
 ```
 
-第一版只有单步或简单两步调用时，不立即加入 LangGraph。出现以下真实需要后再加入：
+第一版只有一个只读工具和短循环，不立即加入 LangGraph。出现以下真实需要后再加入：
 
 ```text
 多个节点和明确分支
@@ -136,7 +163,42 @@ pytest：验证工具参数和 Java API 适配
 长时间运行
 ```
 
-Spring AI 不是临时或不可用框架。它已经是 Spring 官方稳定项目，并原生提供模型抽象、工具调用、DeepSeek、Ollama 和 MCP 等能力。当前 Yudao 项目固定使用 `Spring AI 1.1.5`，本阶段以兼容现有项目为先，不为了追逐新版本直接升级到 2.0。
+Spring AI 不是临时或不可用框架。它已经是 Spring 官方稳定项目，并原生提供模型抽象、工具调用、Ollama 和 MCP 等能力。
+
+这里必须分清两个版本事实：
+
+```text
+当前官方稳定方向：
+Spring AI 2.0.0 已经 GA
+
+当前 Yudao 真实施工环境：
+Spring Boot 3.5.15
++ Spring AI 1.1.5
+```
+
+Spring AI 2.0 把推荐的工具循环进一步收敛到：
+
+```text
+ChatClient
+→ 自动注册 ToolCallingAdvisor
+→ ToolCallingManager 执行工具
+→ 结果回到模型
+→ 循环直到模型返回最终答案
+```
+
+但 2.0 同时包含依赖、包名和工具调用机制等迁移变化。当前阶段不把 Yudao 升级到 2.0，否则“学习 Agent”会变成“迁移 Spring Boot / Spring AI 版本”。本阶段采用三层阅读法：
+
+```text
+稳定通用模型：
+工具定义 → 模型提出调用 → 本地执行 → 结果回传 → 继续或结束
+
+项目真实机制：
+按 Spring AI 1.1.5 和 Yudao 当前源码运行
+
+未来演进方向：
+知道 Spring AI 2.0 的 ChatClient / ToolCallingAdvisor，
+但不把 2.0 源码细节混进当前 1.1.5 调试
+```
 
 LangGraph 是偏底层的状态化编排运行时，适合持久化、恢复、人工介入和复杂流程；其官方文档也建议初学者先理解模型和工具。当前简单闭环若直接使用它，容易让框架结构抢走“模型为什么会调用工具”这个根问题。
 
@@ -144,9 +206,10 @@ LangGraph 是偏底层的状态化编排运行时，适合持久化、恢复、�
 
 | 框架 | 核心长处 | 当前项目代价 | 第 6 步定位 |
 |---|---|---|---|
-| Spring AI | Spring 官方生态、模型抽象、`ChatClient`、Tool Calling、Spring Boot 自动配置 | 复杂 Agent 编排需要继续组合或引入上层框架 | 主线；项目已有 1.1.5 和完整工具基础 |
+| Spring AI | Spring 官方生态、模型抽象、Tool Calling、Spring Boot 自动配置；2.0 推荐 `ChatClient + ToolCallingAdvisor` | 当前项目仍是 1.1.5，直接升级会混入迁移成本 | Java 参考主线；按 1.1.5 跑源码，理解 2.0 方向 |
 | LangChain4j | Java 原生、AI Services 接口代理、工具/RAG/结构化输出较完整，也可集成 Spring Boot | 会在同一项目引入第二套 AI 抽象，削弱现有源码复用 | 后续做一个很小的对照实验，不替换主线 |
 | Spring AI Alibaba Agent/Graph | 在 Spring AI 上增加 State、Node、Edge、ReactAgent 和工作流/多 Agent 编排 | 概念密度更高，简单单工具场景容易过度设计 | 出现真实状态、分支、恢复或人工介入后再升级 |
+| OpenAI Agents SDK（Python） | `Agent + Runner + function_tool` 抽象少，内置循环、校验、会话和追踪，可接 OpenAI-compatible Provider | 增加一个跨语言运行边界，需要处理 Token 转发、超时和错误映射 | Python 旁路实战；复用 Java HTTP 业务接口 |
 
 当前框架决策：
 
@@ -164,7 +227,7 @@ Java 中出现真实复杂工作流：
 增加 Python 旁路服务，不替换 Java 业务核心
 ```
 
-“中等难度起步”不等于一开始就使用复杂图框架。本阶段会直接观察 Spring AI 的 `ToolCallback`、`ToolCallingManager` 和工具执行循环，而不只调用一个完全隐藏细节的高级 Agent，因此仍然具有足够的机制学习深度。
+“中等难度起步”不等于一开始就使用复杂图框架。本阶段会先用人类伪代码手动展开一次工具循环，再观察 Yudao 1.1.5 的 `ToolCallback`、`ToolCallbackResolver`、`ToolCallingManager` 和 `ToolContext`，最后使用 Python SDK 承担重复循环。这样既看见机制，又不把时间耗在手写框架。
 
 ### 两条轻量支线
 
@@ -266,10 +329,13 @@ MODEL_BASE_URL → 本机 Ollama
 ### 当前技术依据
 
 - [Spring AI 稳定版本与官方项目状态](https://docs.spring.io/spring-ai/reference/spring-projects.html)
+- [Spring AI 2.0.0 GA](https://spring.io/blog/2026/06/12/spring-ai-2-0-0-GA-available-now/)
 - [Spring AI Tool Calling](https://docs.spring.io/spring-ai/reference/api/tools.html)
-- [Spring AI DeepSeek](https://docs.spring.io/spring-ai/reference/api/chat/deepseek-chat.html)
 - [Spring AI Ollama](https://docs.spring.io/spring-ai/reference/api/chat/ollama-chat.html)
+- [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)
 - [LangGraph 定位与适用边界](https://docs.langchain.com/oss/python/langgraph/overview)
+- [MCP 工具模型](https://modelcontextprotocol.io/docs/learn/server-concepts)
+- [A2A 与 MCP 的边界](https://a2aproject.github.io/A2A/latest/topics/a2a-and-mcp/)
 - [Ollama Windows](https://docs.ollama.com/windows)
 - [Ollama OpenAI 兼容接口](https://docs.ollama.com/api/openai-compatibility)
 - [DeepSeek API](https://api-docs.deepseek.com/)
@@ -373,17 +439,18 @@ Service 负责确定业务规则
 
 本阶段达到：
 
+- 能写出一个不依赖框架名的 Agent 工具循环伪代码。
 - 能解释自然语言如何经过模型、工具描述、参数、Java 方法和工具结果形成闭环。
-- 跑通一个项目现有工具。
-- 完成一个真实数据库的只读用户查询工具。
-- 增加部门查询，并观察模型怎样进行两步工具调用。
+- 跑通 Yudao 的一个现有 Java 工具，并定位工具注册、选择、执行与回传。
+- 完成一个复用现有“实习任务查询接口”的只读业务 Agent。
 - 能说明为什么工具应复用 Service / API，而不是直接连接数据库。
 - 能识别参数校验、权限、数据范围、超时、空结果、错误返回和审计边界。
+- 能用固定案例同时检查“调用轨迹”和“最终业务结果”；一次成功只算冒烟，不算稳定。
 
 暂不深入：
 
 - 写操作 Agent。
-- MCP Server、多 Agent、复杂工作流和长期任务。
+- MCP Server、A2A、多 Agent、复杂工作流和长期任务。
 - 复杂 RAG、知识库平台、自动审批与高度自治。
 - 模型训练、推理底层和提示词技巧大全。
 
@@ -552,12 +619,12 @@ Spring AI Java 原生闭环
 ### 推荐总量
 
 ```text
-正常节奏：11 个有效学习日
-状态很好：9 个有效学习日
-环境故障较多：允许延长到 13 个有效学习日
+正常节奏：10 个有效学习日
+状态很好：8 个有效学习日
+环境故障较多：允许延长到 12 个有效学习日
 ```
 
-相比 v0.1 多出的一个有效学习日用于 Python 跨语言迁移。空窗期的轻复习不计入有效实现日。不为了赶日期压缩抽象复盘，也不因为遇到一个底层函数就无限延长。
+6A 和 6B 都按“证据簇”而不是固定日历推进；状态好时可以一天完成两个相邻闭环。空窗期的轻复习不计入有效实现日。不为了赶日期压缩抽象复盘，也不因为遇到一个底层函数就无限延长。
 
 ### 6A：建议 6 个有效学习日
 
@@ -711,98 +778,69 @@ Spring AI Java 原生闭环
 
 完成后进行 6A 架构复述与笔记收尾。
 
-### 6B：建议 5 个有效学习日
+### 6B：建议 4 个有效学习日
 
-#### 第 7 天：Spring AI 黑盒与现成工具
+详细步骤、文件范围、项目契约和评测表统一放在：
 
-根问题：
+- [第 6B 步：最小 Agent 业务闭环学习工作台](第6B步-最小Agent业务闭环学习工作台.md)
 
-> 模型为什么能“选择并调用”一个 Java 方法？
+#### 第 7 天：框架无关循环与 Yudao Java 参考
 
-任务：
+```text
+人类逻辑工具循环
+→ PersonService @Tool
+→ ToolCallback
+→ ToolCallbackResolver
+→ ToolCallingManager
+→ tool result 回到模型
+```
 
-- 只建立模型、工具契约、Java 方法和结果回传的完整黑盒。
-- 跑通现有 `PersonService + @Tool + ToolCallback`。
+证据：一次现有只读 Java 工具的完整轨迹，以及一份不带框架名的事件伪代码。
 
-证据：
+#### 第 8 天：Yudao 真实工具链与安全审查
 
-- 一次自然语言触发工具的完整调用记录。
+```text
+AI 角色的 toolIds
+→ AiChatMessageServiceImpl
+→ ToolCallback + ToolContext
+→ UserProfileQueryToolFunction
+→ AdminUserApi
+```
 
-#### 第 8 天：真实只读用户查询工具
+证据：能指出身份、租户、工具选择和业务权限分别来自哪里；识别“示例能运行”与“适合原样开放”之间的边界。
 
-根问题：
+#### 第 9 天：Python 实习任务只读 Agent
 
-> 怎样把自然语言查询安全地翻译为已有用户查询能力？
+```text
+自然语言
+→ Python Agent
+→ query_internship_tasks
+→ Authorization + Gateway
+→ System @PreAuthorize
+→ Service / Mapper / MySQL
+→ tool result
+→ 最终回答
+```
 
-任务：
+证据：一条正常链和一条 401 / 403 失败链；不复制 Java 业务规则。
 
-- 设计 `query_system_users` 的能力、参数和返回边界。
-- 复用已有用户分页/查询 Service 或 API。
-- 使用部门、邮箱和状态做真实查询。
+#### 第 10 天：评测、轨迹、双栈比较与收尾
 
-证据：
+至少覆盖：
 
-- 模型生成参数。
-- Java 查询真实数据库。
-- 空结果和参数错误至少验证一个。
+```text
+正常查询
+空结果
+无 Token
+无权限
+非法参数
+后端不可用
+无关问题不调用工具
+```
 
-#### 第 9 天：Python 旁路服务与跨语言调用
+证据：固定小评测集、至少一个核心案例的重复运行、Java/Python 可替换边界和第 6 步抽象总结。
 
-根问题：
-
-> Python Agent 怎样复用 Java 业务，而不是形成第二套业务系统？
-
-任务：
-
-- 建立最小 FastAPI Agent 服务。
-- 使用云端模型 API。
-- Python 工具携带正常 Authorization 调用 Java 只读接口。
-- 对齐请求、响应、超时和错误边界。
-
-证据：
-
-- 一次 Python → HTTP → Java → MySQL → Python 的完整轨迹。
-- Java 仍然执行权限和业务规则。
-
-#### 第 10 天：两步工具调用与 LangGraph 使用判断
-
-根问题：
-
-> 一个问题需要两种确定能力时，是否已经需要显式工作流？
-
-任务：
-
-- 增加 `query_departments`。
-- 先查部门，再用 `deptId` 查询用户。
-- 观察中间结果怎样成为下一工具输入。
-- 只有当分支、状态或恢复需求真实出现时，才把两步流程迁入 LangGraph。
-
-证据：
-
-- 一次两步调用轨迹。
-- 对不存在部门或重名部门保留明确边界。
-- 一条“需要或暂不需要 LangGraph”的证据化判断。
-
-#### 第 11 天：双栈比较、安全边界与第 6 步收尾
-
-根问题：
-
-> Java 与 Python 两条 Agent 链怎样共享业务事实，同时保持边界清楚？
-
-任务：
-
-- 对比 Spring AI 内嵌工具与 Python 外部工具的调用边界。
-- 回顾权限、数据范围、参数校验、错误返回、日志和只读限制。
-- 给关键工具补最小测试。
-- 从自然语言到数据库再到回答做一次完整回归。
-- 完成架构总结、知识整理和 Git 收尾。
-
-证据：
-
-- 一条正常链。
-- 一条失败链。
-- 一条安全边界说明。
-- 一份可用于项目介绍的能力压缩。
+两步工具、LangGraph、MCP 和 A2A 不再作为 6B 毕业的强制条件；先在单个只读工具稳定后，按真实需求升级。
 
 ## 8. 动态调整规则
 
