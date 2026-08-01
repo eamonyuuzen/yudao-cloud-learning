@@ -88,3 +88,45 @@ WHERE @internship_task_menu_id IS NOT NULL
       WHERE `deleted` = b'0'
         AND `permission` = 'internship:task:update-status'
   );
+
+INSERT INTO `system_menu`
+    (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`,
+     `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`,
+     `create_time`, `updater`, `update_time`, `deleted`)
+SELECT '任务认领', 'internship:task:claim', 3, 5, @internship_task_menu_id,
+       '', '', '', NULL, 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0'
+WHERE @internship_task_menu_id IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM `system_menu`
+      WHERE `deleted` = b'0'
+        AND `permission` = 'internship:task:claim'
+  );
+
+INSERT INTO `system_menu`
+    (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`,
+     `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`,
+     `create_time`, `updater`, `update_time`, `deleted`)
+SELECT '异步任务提交', 'internship:task:job:create', 3, 6, @internship_task_menu_id,
+       '', '', '', NULL, 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0'
+WHERE @internship_task_menu_id IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM `system_menu`
+      WHERE `deleted` = b'0'
+        AND `permission` = 'internship:task:job:create'
+  );
+
+INSERT INTO `system_menu`
+    (`name`, `permission`, `type`, `sort`, `parent_id`, `path`, `icon`, `component`,
+     `component_name`, `status`, `visible`, `keep_alive`, `always_show`, `creator`,
+     `create_time`, `updater`, `update_time`, `deleted`)
+SELECT '异步任务查询', 'internship:task:job:query', 3, 7, @internship_task_menu_id,
+       '', '', '', NULL, 0, b'1', b'1', b'1', 'admin', NOW(), 'admin', NOW(), b'0'
+WHERE @internship_task_menu_id IS NOT NULL
+  AND NOT EXISTS (
+      SELECT 1
+      FROM `system_menu`
+      WHERE `deleted` = b'0'
+        AND `permission` = 'internship:task:job:query'
+  );

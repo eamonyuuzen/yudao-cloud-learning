@@ -351,16 +351,22 @@ Nginx
 
 笔记本默认使用云端模型 API；台式机后续用 Ollama 提供可替换的本地模型 API。模型位置变化不应改变工具契约和 Java 业务接口。
 
-当前路线已根据 2026-07-28 的技术状态收敛：
+当前路线已根据 2026-08-01 的技术状态收敛：
 
 ```text
 先写出框架无关的工具循环伪代码
+→ 用 Pi Agent Core 限时阅读一条透明的运行时源码链
 → 跑通 Yudao 现有 Spring AI 1.1.5 Java 工具
 → 审查 ToolContext、内部 API 与权限边界
 → 用 Python Agent 通过 Gateway + Authorization
    调用现有实习任务分页接口
 → 用固定案例检查调用轨迹和最终数据库结果
 ```
+
+Pi 不作为第二套业务实现：它只替代“Agent Runner/运行时”这个
+可替换层的源码样本。当前 Python Lab 继续承担跨语言业务闭环；
+Java 继续承担身份、权限、规则和数据事实。这样既能看懂框架内部，
+又不会因同时切换 Python/TypeScript 而丢失业务主线。
 
 Spring AI 2.0.0 已经 GA，但当前项目是 Spring Boot 3.5.15 + Spring AI 1.1.5。本阶段只理解 2.0 的推荐演进方向，不做版本迁移。Agent 的详细学习边界和施工步骤见：
 

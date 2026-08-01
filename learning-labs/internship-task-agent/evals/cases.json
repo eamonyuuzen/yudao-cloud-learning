@@ -1,0 +1,42 @@
+[
+  {
+    "id": "normal_title_status",
+    "question": "查询标题包含用户的进行中实习任务",
+    "credential": "normal",
+    "expected_tool": "query_internship_tasks",
+    "expected_tool_status": "SUCCESS",
+    "expected_arguments": {
+      "title": "用户",
+      "status": 1
+    }
+  },
+  {
+    "id": "empty_result",
+    "question": "查询标题包含绝不可能存在的XYZ的任务",
+    "credential": "normal",
+    "expected_tool": "query_internship_tasks",
+    "expected_tool_status": "SUCCESS",
+    "expected_answer_rule": "明确没有匹配结果，不编造任务"
+  },
+  {
+    "id": "missing_auth",
+    "question": "查询待处理实习任务",
+    "credential": "missing",
+    "expected_http_status": 401,
+    "expected_tool": null
+  },
+  {
+    "id": "forbidden",
+    "question": "查询所有已完成实习任务",
+    "credential": "forbidden",
+    "expected_tool": "query_internship_tasks",
+    "expected_tool_status": "FORBIDDEN"
+  },
+  {
+    "id": "irrelevant_chat",
+    "question": "请用一句话解释什么是事务",
+    "credential": "normal",
+    "expected_tool": null,
+    "expected_answer_rule": "不调用实习任务工具"
+  }
+]

@@ -1,7 +1,7 @@
 # 第 6B 步：最小 Agent 业务闭环学习工作台
 
-> 版本：v0.2
-> 日期：2026-07-29
+> 版本：v0.3
+> 日期：2026-08-01
 > 状态：正式进入，先完成框架无关循环与现有 Java 工具链
 
 ## 1. 这一阶段真正要学什么
@@ -52,7 +52,7 @@ FastAPI 脚手架、重复配置、普通 HTTP 客户端代码、
 格式整理、构建命令和机械测试收尾
 ```
 
-完成一条可运行链并抽象出稳定模型后就停止横向扩框架；不以“读过多少 Agent 源码”判断成长。
+完成一条可运行链并抽象出稳定模型后就停止横向扩框架；不以“读过多少 Agent 源码”判断成长。允许增加一个限时源码样本，但它必须回答当前机制问题，不得变成第二条实现主线。
 
 ## 2. 为什么选择“实习任务只读查询 Agent”
 
@@ -340,7 +340,54 @@ MODEL_NAME
 
 如果使用非 OpenAI 的 OpenAI-compatible 接口，优先走 Chat Completions 兼容路径，并验证该 Provider 是否完整支持 Tool Calling。Provider 兼容不是只改一个 URL 就自动成立。
 
-### 为什么不是 LangGraph
+### Pi 在本课程里替换什么
+
+Pi 需要分三层看：
+
+```text
+pi-ai：模型 Provider 适配
+pi-agent-core：消息、工具、循环、状态和事件
+pi-coding-agent：终端界面、文件工具、会话和扩展等完整产品
+```
+
+如果我们把 Python Agent 改成 Node/TypeScript 服务，`pi-agent-core`
+可以替换 OpenAI Agents SDK 所在的 Runner/运行时层。它不替换：
+
+```text
+模型本身
+工具背后的 Java 业务 API
+Token、RBAC、租户和数据范围
+数据库事实
+评测标准
+操作系统级隔离
+```
+
+当前不切换 Python Lab，因为这会同时引入 TypeScript 实现和新的
+Provider 适配。Pi 只作为“源码显微镜”：用 45～60 分钟把手写循环
+映射到 `runLoop` 、工具名匹配、参数校验、`tool.execute` 和
+`toolResult` 回填，然后回到 Yudao 业务链。导读见：
+
+- [Pi Agent Core 源码迁移卡](../courseware/reference-code/step06b-pi-agent-loop.md)
+- [Agent 开源仓库取样卡](../courseware/reference-code/step06b-agent-repository-sampling.md)
+
+### “框架没必要”怎样判断
+
+这句话的有效部分是：不要让框架遮住模型请求、tool call、
+工具结果和第二次模型调用。它不等于生产中所有运行时能力都应
+自己手写。按问题选择：
+
+| 当前问题 | 优先选择 | 引入理由 |
+|---|---|---|
+| 学机制、单模型、单工具、短任务 | 直接 API + 显式循环 | 每个箭头都可见 |
+| Python 业务 Agent，需要 Schema、追踪、Guardrail | 轻量 Agents SDK | 少写运行时机械代码 |
+| Node/TypeScript 嵌入，需要透明循环和事件 | `pi-agent-core` | 核心路径直接，易于扩展 |
+| 大量 Python 集成或中间件 | LangChain `create_agent` | 使用其 Provider/中间件生态 |
+| 长任务、持久状态、失败恢复、人工审批 | LangGraph 或显式工作流 | 需要 checkpoint 和可恢复状态 |
+
+框架只有在“删掉一批重复机械代码，同时不遮住调用链”时才是
+收益；如果只增加新名词和调试层，就不应引入。
+
+### 为什么当前不选 LangChain / LangGraph 作主线
 
 第一版只有：
 
@@ -350,7 +397,9 @@ MODEL_NAME
 一个短循环
 ```
 
-这时 LangGraph 的持久化、恢复、人工中断和显式状态图没有真实用场。出现以下需求后再评估：
+这时 LangChain v1 的中间件生态和 LangGraph 的持久化、恢复、人工
+中断、显式状态图都没有真实用场。这是“暂不选”，不是“框架
+无用”。出现以下需求后再评估：
 
 ```text
 长时间任务
@@ -385,8 +434,9 @@ A2A：
 任务：
 
 1. 用上面的框架无关伪代码手动跑一遍。
-2. 对照当前项目的 Spring AI 与本阶段选择的 Python SDK 最小样例。
-3. 只比较它们把循环的哪些部分封装了；除非某个机制仍无法解释，不再增加第三个框架。
+2. 用 Pi Agent Core 完成一次限时源码迁移，只定位循环、匹配、执行和回填。
+3. 对照当前项目的 Spring AI 与本阶段选择的 Python SDK 最小样例。
+4. 只比较它们把循环的哪些部分封装了；Pi 不安装、不重写 Lab、不展开完整 coding-agent。
 
 证据：
 
@@ -482,6 +532,7 @@ HTTP 客户端机械代码
 6. 能区分 400、401、403、空结果、超时和模型错误。
 7. 能检查轨迹和最终数据库事实。
 8. 能说明 Spring AI、Python SDK、MCP、LangGraph 哪些是可替换层。
+9. 能把手写循环映射到 Pi 的 `runLoop → tool.execute → toolResult`，但不依赖 Pi 术语复述机制。
 
 暂时不要求：
 
@@ -517,6 +568,10 @@ A2A
 - [Spring AI Effective Agents](https://docs.spring.io/spring-ai/reference/api/effective-agents.html)
 - [OpenAI Agents SDK](https://openai.github.io/openai-agents-python/)
 - [OpenAI Agents SDK 非 OpenAI Provider](https://openai.github.io/openai-agents-python/models/)
+- [Pi 官方仓库](https://github.com/earendil-works/pi)
+- [Pi Agent Core](https://github.com/earendil-works/pi/tree/main/packages/agent)
+- [Anthropic: Building effective agents](https://www.anthropic.com/engineering/building-effective-agents)
+- [LangChain v1](https://docs.langchain.com/oss/python/releases/langchain-v1)
 - [LangGraph 定位](https://docs.langchain.com/oss/python/langgraph/overview)
 - [MCP 工具模型](https://modelcontextprotocol.io/docs/learn/server-concepts)
 - [A2A 与 MCP 的边界](https://a2aproject.github.io/A2A/latest/topics/a2a-and-mcp/)
